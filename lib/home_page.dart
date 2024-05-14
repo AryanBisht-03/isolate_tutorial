@@ -1,0 +1,97 @@
+import 'dart:isolate';
+
+import 'package:flutter/material.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            children: [
+              Image.asset('assets/gifs/bouncing-ball.gif'),
+              //Blocking UI task
+              ElevatedButton(
+                onPressed: () async {
+                  var total = await complexTask1();
+                  debugPrint('Result 1: $total');
+                },
+                child: const Text('Task 1'),
+              ),
+              //Isolate
+              ElevatedButton(
+                onPressed: () async {
+                  final receivePort = ReceivePort();
+                  await Isolate.spawn(complexTask2, receivePort.sendPort);
+                  receivePort.listen((total) {
+                    debugPrint('Result 2: $total');
+                  });
+                },
+                child: const Text('Task 2'),
+              ),
+              //Isolate with parameters
+              ElevatedButton(
+                onPressed: () async {
+                  final receivePort = ReceivePort();
+                  await Isolate.spawn(complexTask3,
+                      (iteration: 1000000000, sendPort: receivePort.sendPort));
+                  receivePort.listen((total) {
+                    debugPrint('Result 3: $total');
+                  });
+                },
+                child: const Text('Task 3'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  complexTask4();
+                },
+                child: const Text('Task 3'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<double> complexTask1() async {
+    var total = 0.0;
+    for (var i = 0; i < 1000000000; i++) {
+      total += i;
+    }
+    return total;
+  }
+}
+//--End of HomePage--
+
+complexTask2(SendPort sendPort) {
+  var total = 0.0;
+  for (var i = 0; i < 1000000000; i++) {
+    total += i;
+  }
+  sendPort.send(total);
+}
+
+complexTask3(({int iteration, SendPort sendPort}) data) {
+  var total = 0.0;
+  for (var i = 0; i < data.iteration; i++) {
+    total += i;
+  }
+  data.sendPort.send(total);
+}
+
+Future<double> complexTask4() async {
+  const double iteration = 1000000000;
+  final double photos = await Isolate.run<double>(() {
+    double total = 0.0;
+    for (var i = 0; i < iteration; i++) {
+      total += i;
+    }
+    return total;
+  });
+  return photos;
+}
